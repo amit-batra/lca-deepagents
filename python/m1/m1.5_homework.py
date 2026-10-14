@@ -95,7 +95,7 @@ agent = create_deep_agent(
 )
 
 result = agent.invoke(
-    {"messages": [{"role": "user", "content": "What is (3 + 5) * 2?"}]}
+    {"messages": [{"role": "user", "content": "What is (100 + 50) / (10 * (10 - 5))?"}]}
 )
 
 print(result["messages"][-1].text)
