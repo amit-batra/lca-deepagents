@@ -33,6 +33,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from models import model
 
 agent = create_deep_agent(
+    name="hw_threads_checkpointers_1",
     model=model,
     checkpointer=MemorySaver(),
 )
@@ -48,8 +49,8 @@ agent = create_deep_agent(
 #     thread_a = {"configurable": {"thread_id": "my-thread-a"}}
 # ════════════════════════════════════════════════════════════════════════
 
-thread_a = None  # TODO 1: replace with your own thread config
-thread_b = None  # TODO 1: replace with your own thread config
+thread_a = {"configurable": {"thread_id": "my-thread-a"}} 
+thread_b = {"configurable": {"thread_id": "my-thread-b"}}
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -77,8 +78,42 @@ thread_b = None  # TODO 1: replace with your own thread config
 # ════════════════════════════════════════════════════════════════════════
 
 def run_scenario():
-    """TODO 2: run the multi-turn, multi-thread scenario described above."""
-    raise NotImplementedError("TODO 2: see the comment block above")
+    # Thread A, turn 1: Give the agent a fact to remember.
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": "Remember that my favorite animal is a dolphin."}]},
+        config=thread_a,
+    )
+    print("Thread A, turn 1:")
+    print(result["messages"][-1].text)
 
+    # Thread A, turn 2: Ask the agent to recall the fact.
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": "What does my favorite animal like to eat?"}]},
+        config=thread_a,
+    )
+    print("\nThread A, turn 2:")
+    print(result["messages"][-1].text)
+
+    # Thread B, turn 1: Ask the same question in a different thread.
+    result = agent.invoke(
+        {"messages": [{"role": "user", "content": "What does my favorite animal like to eat?"}]},
+        config=thread_b,
+    )
+    print("\nThread B, turn 1:")
+    print(result["messages"][-1].text)
+
+    # Fresh agent with its own MemorySaver, asking the same question in thread_a.
+    fresh_agent = create_deep_agent(
+      name="hw_threads_checkpointers_2",
+      model=model,
+      checkpointer=MemorySaver()
+    )
+    result = fresh_agent.invoke(
+      {"messages": [{"role": "user", "content": "What does my favorite animal like to eat?"}]},
+      config=thread_a,
+    )
+    print("\nFresh Agent on Thread A:")
+    print(result["messages"][-1].text)
+    print("This fresh agent does not know the fact because it has its own MemorySaver instance.")
 
 run_scenario()

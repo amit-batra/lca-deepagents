@@ -4,6 +4,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from models import model
 
 agent = create_deep_agent(
+    name="messages_threads_checkpointers",
     model=model,
     checkpointer=MemorySaver(),
 )
