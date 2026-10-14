@@ -59,24 +59,39 @@ from models import model
 # ════════════════════════════════════════════════════════════════════════
 
 async def build_tools():
-    """TODO 1: build a MultiServerMCPClient, fetch its tools, filter them,
-    and return the filtered list."""
-    raise NotImplementedError("TODO 1: see the comment block above")
+    client = MultiServerMCPClient(
+        {
+            "deepwiki": {
+                "transport": "http",
+                "url": "https://docs.x.com/mcp",
+            }
+        }
+    )
+    tools = await client.get_tools()
+    print(f"\n{len(tools)} tool(s) found:")
+    for t in tools:
+        print(f"  Name: {t.name}")
+        print(f"  Description: {t.description[:90]}")
 
+    ALLOWED = {"search_x"}
+    return [t for t in tools if t.name in ALLOWED]
 
 # ════════════════════════════════════════════════════════════════════════
 # TODO 2: Write a question suited to your chosen server's own domain,
 # not Lab 1's "what is MCP..." question.
 # ════════════════════════════════════════════════════════════════════════
 
-QUESTION = "TODO 2: replace with a question that puts your chosen tool(s) to work."
-
+SYSTEM_PROMPT = (
+    "You are an expert assistant that uses the available "
+    "tools query the relevant documentation to answer "
+    "user queries."
+)
+QUESTION = "Show me a code example of how to use the X API to retrieve user data."
 
 async def main():
     tools = await build_tools()
-    agent = create_deep_agent(model=model, tools=tools)
+    agent = create_deep_agent(model=model, tools=tools, system_prompt=SYSTEM_PROMPT)
     result = await agent.ainvoke({"messages": [{"role": "user", "content": QUESTION}]})
     print(result["messages"][-1].text)
-
 
 asyncio.run(main())
