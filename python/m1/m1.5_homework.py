@@ -33,7 +33,7 @@ from models import model
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 1: Define your own custom tool.
+# TODO 1: Define your own custom tool(s).
 #
 # Requirements:
 #   - Keep the @tool decorator.
@@ -51,10 +51,26 @@ from models import model
 # ════════════════════════════════════════════════════════════════════════
 
 @tool
-def your_custom_tool(query: str) -> str:
-    """TODO 1: replace this docstring and body with your own tool."""
-    raise NotImplementedError("TODO 1: see the comment block above")
+def add_numbers(num1: float, num2: float) -> float:
+    """Add two numbers and return the result."""
+    return num1 + num2
 
+@tool
+def multiply_numbers(num1: float, num2: float) -> float:
+    """Multiply two numbers and return the result."""
+    return num1 * num2
+
+@tool
+def subtract_numbers(num1: float, num2: float) -> float:
+    """Subtract the second number from the first and return the result."""
+    return num1 - num2
+
+@tool
+def divide_numbers(num1: float, num2: float) -> float:
+    """Divide the first number by the second and return the result."""
+    if num2 == 0:
+        return "Error: Division by zero is not allowed."
+    return num1 / num2
 
 # ════════════════════════════════════════════════════════════════════════
 # TODO 2: Write a system prompt for your agent.
@@ -65,24 +81,21 @@ def your_custom_tool(query: str) -> str:
 # read_sql.
 # ════════════════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = """TODO 2: replace this with your own system prompt."""
-
-# Guards against running with an unfilled placeholder; the filled
-# reference doesn't need this since there's no placeholder text left.
-if "TODO 1" in your_custom_tool.description:
-    raise NotImplementedError("TODO 1: see the comment block above")
-if "TODO 2" in SYSTEM_PROMPT:
-    raise NotImplementedError("TODO 2: see the comment block above")
+SYSTEM_PROMPT = (
+    "You are an expert at solving mathematical calculations. "
+    "When asked to perform a calculation, use the available tools to do so. "
+    "In your final answer, show the calculation steps and the result."
+)
 
 agent = create_deep_agent(
     model=model,
     name="Homework_Agent",
-    tools=[your_custom_tool],
+    tools=[add_numbers, multiply_numbers, subtract_numbers, divide_numbers],
     system_prompt=SYSTEM_PROMPT,
 )
 
 result = agent.invoke(
-    {"messages": [{"role": "user", "content": "Ask your agent a question that needs your tool."}]}
+    {"messages": [{"role": "user", "content": "What is (3 + 5) * 2?"}]}
 )
 
 print(result["messages"][-1].text)
