@@ -28,10 +28,20 @@ async def main():
     for t in tools:
         print(f"  {t.name}")
 
-    agent = create_deep_agent(model=model, tools=tools)
+    SYSTEM_PROMPT = (
+        "You are an expert assistant that uses the available "
+        "tools query the relevant documentation to answer "
+        "user queries."
+    )
+    agent = create_deep_agent(model=model, tools=tools, system_prompt=SYSTEM_PROMPT)
 
     result = await agent.ainvoke({
-        "messages": [{"role": "user", "content": "Use the LangChain docs MCP tool to explain what MCP is and how LangChain uses MCP tools."}]
+        "messages": [
+            {
+                "role": "user",
+                "content": "Explain what MCP is and how LangChain uses MCP tools."
+            }
+        ]
     })
     print(result["messages"][-1].text)
 
