@@ -60,7 +60,6 @@ ENV/
 langsmith_traces/
 
 # IDE
-.vscode/
 .idea/
 .cursor/
 pyrightconfig.json

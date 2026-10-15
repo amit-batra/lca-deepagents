@@ -15,13 +15,14 @@ def send_email(to: str, subject: str, body: str) -> str:
 SYSTEM_PROMPT = """You are a helpful assistant that can send emails.
 
 Rules:
-- Use send_email when the user asks you to send an email.
+- Use the `send_email` tool when the user asks you to send an email.
 - Keep emails concise and professional.
 - Do not claim an email was sent until the tool result confirms it.
 - When confirming an email was sent, quote the subject and body from the tool result, not the original request.
 """
 
 agent = create_deep_agent(
+    name="Email_Sending_Agent",
     model=model,
     tools=[send_email],
     system_prompt=SYSTEM_PROMPT,
