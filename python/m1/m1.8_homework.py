@@ -82,7 +82,11 @@ SYSTEM_PROMPT = (
 
 INITIAL_REQUEST = "Cancel my airline ticket with ID ABC123."
 
-INTERRUPT_ON = {"cancel_airline_ticket": True}
+INTERRUPT_ON = {
+    "cancel_airline_ticket": {
+        "allowed_decisions": ["approve", "edit", "reject"]
+    }
+}
 
 # Guards against running with an unfilled placeholder; the filled
 # reference doesn't need this since there's no placeholder text left.
@@ -137,5 +141,5 @@ while result.interrupts:
 
 for msg in result.value["messages"]:
     if hasattr(msg, "name") and msg.name == "cancel_airline_ticket":
-        print(msg.text)
+        print(msg.content)
         break
