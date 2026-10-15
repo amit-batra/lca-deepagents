@@ -10,6 +10,10 @@ from models import model
 @tool
 def ask_user(question: str, choices: list[str]) -> str:
     """Ask the user a clarifying question with a fixed set of choices."""
+
+    # The string returned by this tool is a no-op by design.
+    # The actual response is handled by the agent's interrupt
+    # mechanism, which will prompt the user for input.
     return f"[No response recorded for: {question}]"
 
 
@@ -18,14 +22,13 @@ def send_email(to: str, subject: str, body: str) -> str:
     """Send an email to a recipient."""
     return f"Email sent to {to} with subject {subject!r}. Body: {body}"
 
-
 SYSTEM_PROMPT = """You are a helpful assistant that can send emails.
 
 Rules:
-- If the user's request depends on a choice only they can make, call ask_user
-  with the question and the list of choices before drafting anything.
-- Use the ask_user response to decide what the email should say.
-- Use send_email when you are ready to send.
+- If the user's request depends on a choice only they can make, call the `ask_user`
+  tool with the question and the list of choices before drafting anything.
+- Use the `ask_user` tool response to decide what the email should say.
+- Use the `send_email` tool when you are ready to send.
 - Keep emails concise and professional.
 - Do not claim an email was sent until the tool result confirms it.
 - When confirming an email was sent, quote the subject and body from the tool result, not the original request.
@@ -42,7 +45,7 @@ agent = create_deep_agent(
     checkpointer=MemorySaver(),
 )
 
-config = {"configurable": {"thread_id": "m1-8-hitl-respond-demo"}}
+config = {"configurable": {"thread_id": "m1-8-hitl-respond-run-01"}}
 
 result = agent.invoke(
     {
@@ -51,7 +54,8 @@ result = agent.invoke(
                 "role": "user",
                 "content": (
                     "Email professor.weng@university.edu that I'll be late, but first "
-                    "check whether I should just apologize or ask for a short extension."
+                    "check whether I should just apologize or ask for a short extension. "
+                    "If I should ask for an extension, ask me how many days I want to request."
                 ),
             }
         ]
@@ -77,12 +81,12 @@ while result.interrupts:
 
             action = questionary.select(
                 "How do you want to handle this email?",
-                choices=["approve", "edit", "reject"],
+                choices=["Approve", "Edit", "Reject"],
             ).ask()
 
-            if action == "approve":
+            if action == "Approve":
                 decisions.append({"type": "approve"})
-            elif action == "edit":
+            elif action == "Edit":
                 edited_args = dict(req["args"])
                 edited_args["body"] = questionary.text("New email body:").ask()
                 decisions.append(
@@ -91,7 +95,7 @@ while result.interrupts:
                         "edited_action": {"name": req["name"], "args": edited_args},
                     }
                 )
-            else:
+            else: # action == "Reject"
                 decisions.append(
                     {"type": "reject", "message": "User rejected this email draft."}
                 )
