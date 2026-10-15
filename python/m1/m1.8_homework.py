@@ -36,7 +36,6 @@ from langgraph.types import Command
 
 from models import model
 
-
 # ════════════════════════════════════════════════════════════════════════
 # STEP 1: Define your own action tool.
 #
@@ -88,13 +87,6 @@ INTERRUPT_ON = {
     }
 }
 
-# Guards against running with an unfilled placeholder; the filled
-# reference doesn't need this since there's no placeholder text left.
-if "TODO 1" in cancel_airline_ticket.description:
-    raise NotImplementedError("TODO 1: see the comment block above")
-if "TODO 2" in SYSTEM_PROMPT or "TODO 2" in INITIAL_REQUEST:
-    raise NotImplementedError("TODO 2: see the comment block above")
-
 agent = create_deep_agent(
     name="m1-8-homework-demo",
     model=model,
@@ -124,8 +116,7 @@ while result.interrupts:
             decisions.append({"type": "approve"})
         elif choice in ("edit", "e"):
             edited_args = dict(req["args"])
-            key = next(iter(edited_args))
-            edited_args[key] = input(f"New value for '{key}': ")
+            edited_args["ticket_id"] = input("New ticket ID: ")
             decisions.append(
                 {
                     "type": "edit",
