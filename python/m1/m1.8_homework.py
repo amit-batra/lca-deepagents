@@ -38,7 +38,7 @@ from models import model
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 1: Define your own action tool.
+# STEP 1: Define your own action tool.
 #
 # Requirements:
 #   - Keep the @tool decorator.
@@ -55,13 +55,13 @@ from models import model
 # ════════════════════════════════════════════════════════════════════════
 
 @tool
-def your_action_tool(argument: str) -> str:
-    """TODO 1: replace this docstring and body with your own action tool."""
-    raise NotImplementedError("TODO 1: see the comment block above")
+def cancel_airline_ticket(ticket_id: str) -> str:
+    """Cancel an airline ticket with the given ID."""
+    return f"Ticket canceled: {ticket_id!r}"
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 2: Configure interrupt_on for your tool, and write a system prompt
+# STEP 2: Configure interrupt_on for your tool, and write a system prompt
 # plus an initial user request that would lead the model to propose
 # calling it.
 #
@@ -74,26 +74,33 @@ def your_action_tool(argument: str) -> str:
 #     want to call it.
 # ════════════════════════════════════════════════════════════════════════
 
-SYSTEM_PROMPT = "TODO 2: replace this with your own system prompt."
-INITIAL_REQUEST = "TODO 2: replace this with a request that would trigger your tool."
-INTERRUPT_ON = {"your_action_tool": True}  # TODO 2: replace with your own allowed_decisions config
+SYSTEM_PROMPT = (
+    "You are a helpful assistant that can cancel airline tickets when requested "
+    "by the user. Use the 'cancel_airline_ticket' tool to perform this action "
+    "when appropriate."
+)
+
+INITIAL_REQUEST = "Cancel my airline ticket with ID ABC123."
+
+INTERRUPT_ON = {"cancel_airline_ticket": True}
 
 # Guards against running with an unfilled placeholder; the filled
 # reference doesn't need this since there's no placeholder text left.
-if "TODO 1" in your_action_tool.description:
+if "TODO 1" in cancel_airline_ticket.description:
     raise NotImplementedError("TODO 1: see the comment block above")
 if "TODO 2" in SYSTEM_PROMPT or "TODO 2" in INITIAL_REQUEST:
     raise NotImplementedError("TODO 2: see the comment block above")
 
 agent = create_deep_agent(
+    name="m1-8-homework-demo",
     model=model,
-    tools=[your_action_tool],
+    tools=[cancel_airline_ticket],
     system_prompt=SYSTEM_PROMPT,
     interrupt_on=INTERRUPT_ON,
     checkpointer=MemorySaver(),
 )
 
-config = {"configurable": {"thread_id": "m1-8-homework-demo"}}
+config = {"configurable": {"thread_id": "m1-8-homework-demo-edit"}}
 
 result = agent.invoke(
     {"messages": [{"role": "user", "content": INITIAL_REQUEST}]},
@@ -129,6 +136,6 @@ while result.interrupts:
     result = agent.invoke(Command(resume={"decisions": decisions}), config=config, version="v2")
 
 for msg in result.value["messages"]:
-    if hasattr(msg, "name") and msg.name == "your_action_tool":
+    if hasattr(msg, "name") and msg.name == "cancel_airline_ticket":
         print(msg.text)
         break
