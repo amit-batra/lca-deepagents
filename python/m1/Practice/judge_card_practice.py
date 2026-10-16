@@ -32,7 +32,10 @@ RUN
 
 from __future__ import annotations
 
+import asyncio
+from deepagents import create_deep_agent
 from langchain_core.tools import tool
+from langchain_mcp_adapters.client import MultiServerMCPClient
 
 from judge_card_helpers import (
     OUTPUT_DIR,
@@ -48,7 +51,7 @@ from models import model
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 1 (Lesson 1.4, The System Prompt: Persona)
+# STEP 1 (Lesson 1.4, The System Prompt: Persona)
 # Three example judges are already written below. Write a fourth,
 # "your_persona", in a voice all your own: it's the judge that runs by
 # default, so it's the card that gets posted.
@@ -101,14 +104,18 @@ can barely be bothered to look up from whatever they were doing to
 deliver it. You are sharp, a little cruel, and allergic to participation
 trophies.""" + TOOL_SEQUENCE,
 
-    "your_persona": """TODO 1: replace this text with your own judge persona.
-Start with "You are <Name>, ..." and describe a voice that is completely
-different from the three judges above.""" + TOOL_SEQUENCE,
+    "your_persona": """You are Nalin, a computer nerd from the 90s who has
+grown up on a feast of Microsoft QuickBasic, Turbo Pascal and Borland Delphi. 
+You are highly opiniated, you think that you can never be wrong and you can 
+be rude to the extent of being disrespectful. You speak in monosyllables
+and you frequently cite made-up (fake) incidents from your past to support
+every claim that you make. Your job is to judge a personality-quiz according
+to the rules defined below.""" + TOOL_SEQUENCE
 }
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 2 (Lesson 1.5, Tools: Custom Tools)
+# STEP 2 (Lesson 1.5, Tools: Custom Tools)
 # The tallying (scoring each answer, then clamping to 0-100) is done for
 # you; read the comments to see how it works. Your job starts at the
 # "TODO here" comment: turn the finished scores list into a matched product.
@@ -132,7 +139,7 @@ def score_and_match(answers: list[tuple[int, int, int]]) -> dict:
     # clamp every score back into that range.
     scores = [max(0, min(100, score)) for score in scores]
 
-    # TODO here: scores is finished. Use it to pick a matched product.
+    # Scores is finished. Use it to pick a matched product.
     # 1. Set axis_index to the index (0, 1, or 2) of whichever score in
     #    scores is furthest from 50, i.e. has the biggest abs(score - 50).
     #    Hint: this is a "find the index of the biggest value" problem.
@@ -146,45 +153,54 @@ def score_and_match(answers: list[tuple[int, int, int]]) -> dict:
     # 3. Set product to PRODUCT_MATCHES[direction.lower()], e.g.
     #    PRODUCT_MATCHES["chaotic"] -> "Fleet".
     # 4. Return {"trait_scores": scores, "product": product}.
-    raise NotImplementedError("TODO 2: see the comments above")
+    axis_index = max(range(len(scores)), key=lambda i: abs(scores[i] - 50))
+    direction = TRAIT_AXES[axis_index][1] if scores[axis_index] >= 50 else TRAIT_AXES[axis_index][0]
+    product = PRODUCT_MATCHES[direction.lower()]
+    return {"trait_scores": scores, "product": product}
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 3 (Lesson 1.7, Messages, Threads, and Checkpointers: Threads)
+# STEP 3 (Lesson 1.7, Messages, Threads, and Checkpointers: Threads)
 # Add one of the example judges' keys ("salty_pirate", "ancient_mummy", or
 # "savage_critic") to this list; you don't need to write another persona.
 # Each judge runs in its own thread, so you get one card per judge, all
 # judging the same quiz answers.
 # ════════════════════════════════════════════════════════════════════════
 
-JUDGES_TO_RUN = ["your_persona"]  # TODO 3: e.g. ["your_persona", "ancient_mummy"]
+#JUDGES_TO_RUN = ["your_persona", "savage_critic"]
+JUDGES_TO_RUN = ["your_persona"]
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 4 (Lesson 1.8, Human-in-the-Loop: Decision Types)
+# STEP 4 (Lesson 1.8, Human-in-the-Loop: Decision Types)
 # Right now post_card runs without asking. Set INTERRUPT_ON so the agent
 # pauses before posting. When it pauses, you'll see a draft of the post and
 # can approve, edit, or reject it.
 # ════════════════════════════════════════════════════════════════════════
 
-INTERRUPT_ON = None  # TODO 4: e.g. {"post_card": True}
+INTERRUPT_ON = {
+    "post_card": {
+        "allowed_decisions": ["approve", "edit", "reject"]
+    }
+}
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 5 (Lesson 1.3, Models, optional)
+# STEP 5 (Lesson 1.3, Models, optional)
 # Import strong_model (next to model in the import at the top of this file),
 # set MODEL to it, and compare the comedic timing.
 # ════════════════════════════════════════════════════════════════════════
 
-MODEL = model  # TODO 5 (optional): e.g. MODEL = strong_model
+MODEL = model
+# MODEL = strong_model
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 6 (Lesson 1.6, MCP: Connecting Agents to External Services)
+# STEP 6 (Lesson 1.6, MCP: Connecting Agents to External Services)
 # A stretch goal. Until you do it, this tool returns PLACEHOLDER_FACT, so
 # the rest of the practice runs without it.
 #
-# score_and_match (TODO 2) already picked your product; this tool only
+# score_and_match (STEP 2) already picked your product; this tool only
 # describes it with one real fact from the docs. No login, API key, or
 # account needed: docs.langchain.com/mcp is a public server.
 #
@@ -204,7 +220,38 @@ MODEL = model  # TODO 5 (optional): e.g. MODEL = strong_model
 # know it failed: the agent gets the same placeholder text in both cases.
 # ════════════════════════════════════════════════════════════════════════
 
-PLACEHOLDER_FACT = "No docs fact available. Base the verdict on the trait scores instead."
+async def fetch_product_fact_helper(product_name: str) -> str:
+    mcp_client = MultiServerMCPClient({
+        "docs-langchain": {
+            "transport": "http",
+            "url": "https://docs.langchain.com/mcp",
+        }
+    })
+    tools = await mcp_client.get_tools()
+
+    ALLOWED_TOOLS = {"search_docs_by_lang_chain"}
+    tools = [t for t in tools if t.name in ALLOWED_TOOLS]
+
+    SYSTEM_PROMPT = (
+        "You are a helpful assistant who invokes the available tool(s) to fetch "
+        "the details of the specified product and generate a short factual "
+        "one sentence description of that product in under 25 words."
+    )
+    agent_small = create_deep_agent(
+        name="fact_fetcher_agent",
+        tools=tools,
+        model=model,
+        system_prompt=SYSTEM_PROMPT
+    )
+    result = await agent_small.ainvoke({
+        "messages": [
+            {
+                "role": "user",
+                "content": f"Product name: {product_name!r}"
+            }
+        ]
+    })
+    return result["messages"][-1].content.strip()
 
 
 @tool
@@ -212,8 +259,8 @@ def fetch_product_fact(product: str) -> str:
     """Look up one grounded, factual sentence about the LangChain product
     you were matched with. Call this right after score_and_match, passing
     in the product name it returned."""
-    # TODO 6: replace this line with the MCP lookup described above.
-    return PLACEHOLDER_FACT
+    # STEP 6: Perform the MCP lookup by invoking the helper function (above).
+    return asyncio.run(fetch_product_fact_helper(product_name=product))
 
 
 def build_user_prompt(answers: list[tuple[int, int, int]]) -> str:

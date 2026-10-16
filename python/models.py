@@ -107,3 +107,4 @@ from langchain.chat_models import init_chat_model
 
 # Ollama
 model = init_chat_model("ollama:gemma4:26b-mlx")
+strong_model = init_chat_model("ollama:qwen3.8:27b-mlx")
