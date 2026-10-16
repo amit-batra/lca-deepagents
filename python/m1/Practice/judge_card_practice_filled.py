@@ -131,11 +131,11 @@ async def _fetch_product_fact_async(product: str) -> str:
 
 # TODO 6 filled in (stretch goal)
 @tool
-def fetch_product_fact(product: str) -> str:
+async def fetch_product_fact(product: str) -> str:
     """Look up one grounded, factual sentence about the LangChain product
     you were matched with. Call this right after score_and_match, passing
     in the product name it returned."""
-    return asyncio.run(_fetch_product_fact_async(product))
+    return await _fetch_product_fact_async(product)
 
 
 def build_user_prompt(answers: list[tuple[int, int, int]]) -> str:
@@ -148,11 +148,9 @@ def build_user_prompt(answers: list[tuple[int, int, int]]) -> str:
     )
 
 
-if __name__ == "__main__":
-    answers = run_quiz()
-    user_prompt = build_user_prompt(answers)
+async def run_all_judges(user_prompt: str) -> None:
     for judge_name in JUDGES_TO_RUN:
-        run_judge(
+        await run_judge(
             judge_name,
             system_prompt=JUDGE_PERSONAS[judge_name],
             user_prompt=user_prompt,
@@ -162,3 +160,14 @@ if __name__ == "__main__":
             thread_prefix="m1-practice-filled",
         )
     print(f"\nCards saved to {OUTPUT_DIR}/")
+
+
+if __name__ == "__main__":
+    # The quiz runs BEFORE the event loop starts: questionary drives the
+    # terminal through prompt_toolkit, which calls asyncio.run() internally
+    # and so refuses to run inside a loop we already own.
+    user_prompt = build_user_prompt(run_quiz())
+    # One event loop for the whole run, so every model call (including the
+    # nested one inside fetch_product_fact) shares models.py's `model`
+    # client safely.
+    asyncio.run(run_all_judges(user_prompt))

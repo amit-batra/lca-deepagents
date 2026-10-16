@@ -397,12 +397,12 @@ def post_card(caption: str) -> str:
     return f"Posted with caption: {caption!r}"
 
 
-def _invoke_checked(agent, agent_input, config):
-    """Run one agent.invoke() call, turning an unfinished TODO's
+async def _ainvoke_checked(agent, agent_input, config):
+    """Run one agent.ainvoke() call, turning an unfinished TODO's
     NotImplementedError into a short, readable message instead of the full
     LangGraph/tool-call traceback it would otherwise surface as."""
     try:
-        return agent.invoke(agent_input, config=config, version="v2")
+        return await agent.ainvoke(agent_input, config=config, version="v2")
     except NotImplementedError as e:
         print(f"\nStopped: {e}")
         print(
@@ -412,7 +412,7 @@ def _invoke_checked(agent, agent_input, config):
         sys.exit(1)
 
 
-def run_judge(
+async def run_judge(
     judge_name: str,
     *,
     system_prompt: str,
@@ -423,7 +423,16 @@ def run_judge(
     thread_prefix: str = "m1-practice",
 ) -> None:
     """Build the agent for one judge persona, run the quiz, and walk through
-    any human-in-the-loop approval prompts until it's done."""
+    any human-in-the-loop approval prompts until it's done.
+
+    Async on purpose: the whole script runs on ONE event loop (see the
+    __main__ block in judge_card_practice.py). A chat model client owns an
+    httpx connection pool whose keep-alive connections are bound to the loop
+    that first used them, so sharing the models.py singleton `model` across
+    two different loops raises "RuntimeError: Event loop is closed". Staying
+    async end to end keeps every model call on the same loop, which is what
+    makes that shared singleton safe.
+    """
     agent = create_deep_agent(
         model=model,
         tools=tools,
@@ -433,7 +442,7 @@ def run_judge(
     )
     config = {"configurable": {"thread_id": f"{thread_prefix}-{judge_name}"}}
 
-    result = _invoke_checked(
+    result = await _ainvoke_checked(
         agent, {"messages": [{"role": "user", "content": user_prompt}]}, config
     )
 
@@ -469,4 +478,4 @@ def run_judge(
                     break
                 else:
                     print("  Please type approve, edit, or reject.")
-        result = _invoke_checked(agent, Command(resume={"decisions": decisions}), config)
+        result = await _ainvoke_checked(agent, Command(resume={"decisions": decisions}), config)

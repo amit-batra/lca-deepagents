@@ -167,8 +167,7 @@ def score_and_match(answers: list[tuple[int, int, int]]) -> dict:
 # judging the same quiz answers.
 # ════════════════════════════════════════════════════════════════════════
 
-#JUDGES_TO_RUN = ["your_persona", "savage_critic"]
-JUDGES_TO_RUN = ["your_persona"]
+JUDGES_TO_RUN = ["your_persona", "salty_pirate", "ancient_mummy", "savage_critic"]
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -211,9 +210,12 @@ MODEL = model
 #      `product` in ONE short factual sentence (under 25 words).
 #   4. Return that sentence, stripped of extra whitespace.
 #
-# This tool must stay synchronous, so put the MCP/agent calls in a separate
-# `async def` helper (same shape as m1.6's `async def main(): ...`) and call
-# it with asyncio.run(...) from inside fetch_product_fact.
+# This tool must stay async, so put the MCP/agent calls directly in it
+# rather than reaching for asyncio.run(...) from a sync tool. Each
+# asyncio.run(...) would spin up its own event loop, and a chat model client
+# can only be used from the loop it was first used on, so a second loop
+# sharing models.py's `model` breaks every later model call with
+# "RuntimeError: Event loop is closed".
 #
 # On any failure (no network, tool error), print the error and return
 # PLACEHOLDER_FACT so the practice stays runnable. The print is how you'll
@@ -255,12 +257,12 @@ async def fetch_product_fact_helper(product_name: str) -> str:
 
 
 @tool
-def fetch_product_fact(product: str) -> str:
+async def fetch_product_fact(product: str) -> str:
     """Look up one grounded, factual sentence about the LangChain product
     you were matched with. Call this right after score_and_match, passing
     in the product name it returned."""
-    # STEP 6: Perform the MCP lookup by invoking the helper function (above).
-    return asyncio.run(fetch_product_fact_helper(product_name=product))
+    # STEP 6: Perform the MCP lookup by awaiting the helper function (above).
+    return await fetch_product_fact_helper(product_name=product)
 
 
 def build_user_prompt(answers: list[tuple[int, int, int]]) -> str:
@@ -273,11 +275,9 @@ def build_user_prompt(answers: list[tuple[int, int, int]]) -> str:
     )
 
 
-if __name__ == "__main__":
-    answers = run_quiz()
-    user_prompt = build_user_prompt(answers)
+async def run_all_judges(user_prompt: str) -> None:
     for judge_name in JUDGES_TO_RUN:
-        run_judge(
+        await run_judge(
             judge_name,
             system_prompt=JUDGE_PERSONAS[judge_name],
             user_prompt=user_prompt,
@@ -286,3 +286,14 @@ if __name__ == "__main__":
             interrupt_on=INTERRUPT_ON,
         )
     print(f"\nCards saved to {OUTPUT_DIR}/")
+
+
+if __name__ == "__main__":
+    # The quiz runs BEFORE the event loop starts: questionary drives the
+    # terminal through prompt_toolkit, which calls asyncio.run() internally
+    # and so refuses to run inside a loop we already own.
+    user_prompt = build_user_prompt(run_quiz())
+    # One event loop for the whole run, so every model call (including the
+    # nested one inside fetch_product_fact) shares models.py's `model`
+    # client safely.
+    asyncio.run(run_all_judges(user_prompt))

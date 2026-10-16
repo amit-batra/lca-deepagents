@@ -29,7 +29,7 @@
     <text x="40.0" y="310" fill="#E8B94A">INTERRUPT_ON = None</text>
     <text x="40.0" y="329" fill="#7FE0D6">MODEL = model</text>
     <text x="40.0" y="348" fill="#40668D"></text>
-    <text x="40.0" y="367" fill="#B9A6FF">def fetch_product_fact(product: str) -&gt; str:</text>
+    <text x="40.0" y="367" fill="#B9A6FF">async def fetch_product_fact(product: str) -&gt; str:</text>
     <text x="67.6" y="386" fill="#B9A6FF">return PLACEHOLDER_FACT  # TODO 6</text>
   </g>
   <line x1="440" y1="154.0" x2="468" y2="148.5" stroke="#6E8900" stroke-width="1.5"/>
