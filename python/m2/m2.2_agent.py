@@ -4,7 +4,7 @@ from pathlib import Path
 from deepagents import FilesystemPermission, create_deep_agent
 from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
 
-from models import model
+from models import model, strong_model
 
 reference_dir = Path(__file__).parent / "reference"
 reference_dir.mkdir(exist_ok=True)
@@ -21,7 +21,7 @@ Responsibilities:
 
 agent = create_deep_agent(
     name="module-2.2-agent",
-    model=model,
+    model=strong_model,
     backend=CompositeBackend(
         default=StateBackend(),
         routes={
@@ -52,7 +52,7 @@ result = agent.invoke(
             }
         ]
     },
-    config={"configurable": {"thread_id": "lab-m2.2"}},
+    config={"configurable": {"thread_id": "lab-m2.2-qwen"}},
 )
 
 print(result["messages"][-1].text)
