@@ -106,5 +106,5 @@ from langchain.chat_models import init_chat_model
 # model = init_chat_model("google_genai:gemini-3.5-flash-lite")
 
 # Ollama
-model = init_chat_model("ollama:gemma4:26b-mlx")
-strong_model = init_chat_model("ollama:qwen3.8:27b-mlx")
+model = init_chat_model("ollama:gemma4:26b")
+strong_model = init_chat_model("ollama:qwen3.8:27b")

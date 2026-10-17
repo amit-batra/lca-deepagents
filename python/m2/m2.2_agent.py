@@ -20,6 +20,7 @@ Responsibilities:
 """)
 
 agent = create_deep_agent(
+    name="module-2.2-agent",
     model=model,
     backend=CompositeBackend(
         default=StateBackend(),
