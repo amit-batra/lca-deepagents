@@ -2,6 +2,7 @@ from deepagents import create_deep_agent
 
 from models import model
 
+# Instantiate a Deep Agent with the Default Backend
 agent = create_deep_agent(model=model)
 
 result = agent.invoke({
@@ -17,4 +18,5 @@ result = agent.invoke({
     ]
 })
 
+# This is not expected to contain the `execute` tool
 print(result["messages"][-1].content)
