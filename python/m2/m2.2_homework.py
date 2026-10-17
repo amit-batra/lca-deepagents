@@ -28,13 +28,14 @@ RUN
 from pathlib import Path
 
 from deepagents import FilesystemPermission, create_deep_agent
-from deepagents.backends import CompositeBackend, FilesystemBackend, StateBackend
+from deepagents.backends import FilesystemBackend
+from langchain_core.messages import AIMessage
 
-from models import model
+from models import model, strong_model
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 1: Configure a backend for a topic of your choosing.
+# STEP 1: Configure a backend for a topic of your choosing.
 #
 # Requirements:
 #   - Pick a small file-based task: a packing list, a journal, a recipe
@@ -52,7 +53,15 @@ from models import model
 #   backend = FilesystemBackend(root_dir=str(my_dir), virtual_mode=True)
 # ════════════════════════════════════════════════════════════════════════
 
-backend = None  # TODO 1: replace with a StateBackend, FilesystemBackend, or CompositeBackend
+root_dir: Path = Path(__file__).parent / "reference"
+
+original_filename: str = "europe-trip-packing-list.md" 
+duplicate_filename:str = "/duplicates/duplicate-packing-list.md"
+
+backend = FilesystemBackend(
+  root_dir=str(root_dir),
+  virtual_mode=True
+)
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -64,23 +73,39 @@ backend = None  # TODO 1: replace with a StateBackend, FilesystemBackend, or Com
 # empty and skipping permissions entirely is also a valid choice.
 # ════════════════════════════════════════════════════════════════════════
 
-TASK = None  # TODO 2: replace with your own task message
-permissions: list[FilesystemPermission] = []  # TODO 2 (optional): add rules here
+USER_MESSAGE:str = (
+  f"Read the file {original_filename!r} and list down all the toiletries "
+  "that you find in it. Next, split the line item with Medications "
+  "and a small first-aid kit into two separate line item. Finally, "
+  f"create a duplicate of this file at {duplicate_filename!r}. "
+  "Generate a summary of everything that you accomplished."
+)
 
-if backend is None:
-    raise NotImplementedError("TODO 1: see the comment block above")
-if TASK is None:
-    raise NotImplementedError("TODO 2: see the comment block above")
+permissions: list[FilesystemPermission] = [
+  FilesystemPermission(
+    operations=["write"],
+    paths=["/duplicates/**/*"],
+    mode="deny",
+  )
+]
 
 agent = create_deep_agent(
-    model=model,
-    backend=backend,
-    permissions=permissions,
+  name="m2.2_homework_agent",
+  model=model,
+  backend=backend,
+  permissions=permissions,
 )
 
 result = agent.invoke(
-    {"messages": [{"role": "user", "content": TASK}]},
-    config={"configurable": {"thread_id": "homework-m2.2"}},
+  {
+    "messages": [{
+      "role": "user",
+      "content": USER_MESSAGE
+    }]
+  },
+  config={"configurable": {"thread_id": "homework-m2.2"}},
 )
 
-print(result["messages"][-1].text)
+for message in result["messages"]:
+    if type(message) == AIMessage:
+        print(message.content)
