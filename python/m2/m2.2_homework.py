@@ -78,7 +78,7 @@ USER_MESSAGE:str = (
   "that you find in it. Next, split the line item with Medications "
   "and a small first-aid kit into two separate line item. Finally, "
   f"create a duplicate of this file at {duplicate_filename!r}. "
-  "Generate a summary of everything that you accomplished."
+  "Generate an outcome summary for all the work that you performed."
 )
 
 permissions: list[FilesystemPermission] = [
@@ -106,6 +106,4 @@ result = agent.invoke(
   config={"configurable": {"thread_id": "homework-m2.2"}},
 )
 
-for message in result["messages"]:
-    if type(message) == AIMessage:
-        print(message.content)
+print(result["messages"][-1].content)
