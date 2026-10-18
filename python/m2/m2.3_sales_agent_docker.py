@@ -1,7 +1,18 @@
 from pathlib import Path
+from typing import Any
 
 from deepagents import create_deep_agent
+from deepagents.backends.protocol import (
+    FileDownloadResponse,
+    FileUploadResponse,
+)
 from deepagents_docker import DockerSandbox
+from langchain.agents.middleware.types import (
+    AgentState,
+    InputAgentState,
+    OutputAgentState,
+)
+from langgraph.graph.state import CompiledStateGraph
 
 from models import model
 
@@ -12,7 +23,7 @@ with DockerSandbox(image="python:3.14", timeout=600) as backend:
 
     # Upload chinook.db to the Docker sandbox
     with open(DB_PATH, "rb") as f:
-        upload_results = backend.upload_files([("/chinook.db", f.read())])
+        upload_results: list[FileUploadResponse] = backend.upload_files([("/chinook.db", f.read())])
 
     # Ensure that the file upload was successful
     for upload_result in upload_results:
@@ -21,7 +32,9 @@ with DockerSandbox(image="python:3.14", timeout=600) as backend:
 
     # Create a Deep Agent passing it a reference to the Docker Sandbox
     # along with the System Prompt.
-    agent = create_deep_agent(
+    agent: CompiledStateGraph[
+        AgentState[Any], Any, InputAgentState, OutputAgentState[Any]
+    ] = create_deep_agent(
         name="sales_agent_docker",
         model=model,
         backend=backend,
@@ -40,7 +53,7 @@ with DockerSandbox(image="python:3.14", timeout=600) as backend:
     )
 
     # Invoke the Deep Agent with User Instructions and print the final output
-    result = agent.invoke({
+    result: dict[str, Any] = agent.invoke({
         "messages": [
             {
                 "role": "user",
@@ -62,12 +75,16 @@ with DockerSandbox(image="python:3.14", timeout=600) as backend:
 
     # Download the file produced by the Deep Agent
     out_path:Path = Path(__file__).parent / "genre_revenue.png"
-    download_results = backend.download_files(paths=["/genre_revenue.png"])
+    download_results: list[FileDownloadResponse] = backend.download_files(paths=["/genre_revenue.png"])
     for download_result in download_results:
         if download_result.error:
             raise RuntimeError(f"Failed to download {out_path!r}")
 
-        png_bytes = download_result.content
-        out_path.write_bytes(png_bytes)
-        print(f"Chart saved to {out_path!r}")
+        png_bytes: bytes | None = download_result.content
+        if png_bytes is not None:
+            out_path.write_bytes(png_bytes)
+            print(f"Chart saved to {out_path!r}")
+        else:
+            print("The agent produced an empty file. Nothing saved!")
+
         break
