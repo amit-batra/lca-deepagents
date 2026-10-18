@@ -11,7 +11,7 @@ from langgraph.graph.state import CompiledStateGraph
 
 from models import model
 
-with DockerSandbox(image="python:3-alpine") as backend:
+with DockerSandbox(image="python:3.14") as backend:
 
     agent: CompiledStateGraph[
         AgentState[Any], Any, InputAgentState, OutputAgentState[Any]
