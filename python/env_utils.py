@@ -367,7 +367,7 @@ def doublecheck_pkgs(pyproject_path="pyproject.toml", verbose=False):
     with p.open("rb") as f:
         data = tomllib.load(f)
     project = data.get("project", {})
-    python_spec_str = project.get("requires-python") or ">=3.11"
+    python_spec_str = project.get("requires-python") or ">=3.12"
 
     py_ver = Version(f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
     py_ok = py_ver in SpecifierSet(python_spec_str)
