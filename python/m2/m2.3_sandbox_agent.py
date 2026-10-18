@@ -16,7 +16,8 @@ agent = create_deep_agent(
     backend=backend,
     system_prompt=(
         "You are a coding assistant. When asked to run code, write the script "
-        "to a file first, then execute it. Show the output in your final answer."
+        "to a file first, then execute it. Show both the script as well as the "
+        "output in your final answer."
     ),
 )
 
