@@ -46,6 +46,7 @@ def query_chinook(sql: str) -> str:
 # the interpreter as well as some hints on how to use it.
 
 agent_with = create_deep_agent(
+    name="agent_with_eval_ptc",
     model=model,
     tools=[query_chinook],
     middleware=[CodeInterpreterMiddleware(ptc=["query_chinook"])],
@@ -70,6 +71,7 @@ print(result_with["messages"][-1].text)
 # --- Agent without interpreter ---
 
 agent_without = create_deep_agent(
+    name="agent_without_eval_ptc",
     model=model,
     tools=[query_chinook],
     system_prompt=SYSTEM,
