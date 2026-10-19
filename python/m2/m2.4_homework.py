@@ -6,21 +6,12 @@ Lab 2 asked one fixed, dependent-query question about the Chinook
 database and let the interpreter chain four SQL queries together inside
 a single eval() call. This homework asks you to pose your OWN question
 about the database (anything query_chinook and a little JavaScript can
-answer, simple or dependent, your call), and then, since this lesson is
-also about evaluating what an agent's code produces, write your own quick
-eval check that judges whether the agent's answer looks right. There's no
-single right question or eval method here, that's the point.
+answer, simple or dependent, your call).
 
 WHAT YOU FILL IN
-  TODO 1: write your own natural-language question about the Chinook
-    database (see the schema hints in SYSTEM below) for the interpreter
-    agent to answer using eval() and query_chinook.
-  TODO 2: write a small eval_answer(...) function that independently
-    checks whether the agent's final answer looks correct. However you
-    want to do this is fine: run your own SQL query and compare, check
-    for an expected keyword or number, or just print both side by side
-    for your own judgment call. Pick whatever level of rigor makes sense
-    for your question.
+  Write your own natural-language question about the Chinook
+  database (see the schema hints in SYSTEM below) for the interpreter
+  agent to answer using eval() and query_chinook.
 
 RUN
   cd python
@@ -38,9 +29,11 @@ from langchain_quickjs import CodeInterpreterMiddleware
 
 from models import model
 
-DB_PATH = Path(__file__).resolve().parent / "chinook.db"
+DB_PATH: Path = Path(__file__).resolve().parent / "chinook.db"
 
-SYSTEM = (
+# Define the system prompt to tell the agent to use the `eval`
+# tool with PTC for quering the Chinook database
+SYSTEM_PROMPT: str = (
     "You are a sales analyst for Chinook Digital Music Store. "
     "Use the query_chinook tool to query the database. "
     "Key tables: Artist(ArtistId, Name), Album(AlbumId, Title, ArtistId), "
@@ -53,7 +46,7 @@ SYSTEM = (
     "running inside eval() can call query_chinook via tools.queryChinook()."
 )
 
-
+# Define the `query_chook` tool for the agent to invoke
 @tool
 def query_chinook(sql: str) -> str:
     """Execute a read-only SQL query against the Chinook database. Returns a JSON-encoded string."""
@@ -66,9 +59,8 @@ def query_chinook(sql: str) -> str:
     finally:
         conn.close()
 
-
 # ════════════════════════════════════════════════════════════════════════
-# TODO 1: Write your own question about the Chinook database.
+# ASK: Write your own question about the Chinook database.
 #
 # Pick anything the query_chinook tool can answer: top customers by
 # country, which artist has the most albums, average invoice total by
@@ -77,38 +69,30 @@ def query_chinook(sql: str) -> str:
 # single-query question is a perfectly fine answer too.
 # ════════════════════════════════════════════════════════════════════════
 
-TASK = None  # TODO 1: replace with your own question
+USER_PROMPT:str = (
+    "Find out the full name and country of the customer who has made the "
+    "cumulative highest purchases from the Chinook Digital Music Store. "
+    "Also list down all the tracks they purchased across all their invoices. "
+    "Based on their cumulative purchases, determine the top 3 genres that this "
+    "customers has purchased. Also deduplicate and list down all the albums that "
+    "this customer's purchased tracks belong to."
+)
 
-
-# ════════════════════════════════════════════════════════════════════════
-# TODO 2: Write a simple eval check for the agent's answer.
-#
-# eval_answer(answer_text) runs after the agent responds. Independently
-# work out what you believe the right answer is (run your own SQL query,
-# do the math by hand, whatever) and compare it against answer_text. Print
-# whatever verdict makes sense; this doesn't need to be a strict
-# pass/fail, a reasoned printout is fine.
-# ════════════════════════════════════════════════════════════════════════
-
-def eval_answer(answer_text: str) -> None:
-    raise NotImplementedError("TODO 2: see the comment block above")
-
-
-if TASK is None:
-    raise NotImplementedError("TODO 1: see the comment block above")
-
+# Instantiate the Agent, passing the Code Interpreter middleware
+# and the system prompt along with the `query_chinook` tool
 agent = create_deep_agent(
+    name="m2.4_homework_agent",
     model=model,
     tools=[query_chinook],
     middleware=[CodeInterpreterMiddleware(ptc=["query_chinook"])],
-    system_prompt=SYSTEM,
+    system_prompt=SYSTEM_PROMPT,
 )
 
+# Invoke the agent and fetch the result of invocation
 result = agent.invoke(
-    {"messages": [{"role": "user", "content": TASK}]},
+    {"messages": [{"role": "user", "content": USER_PROMPT}]},
     config={"configurable": {"thread_id": str(uuid.uuid4())}},
 )
 
-answer = result["messages"][-1].text
-print(answer)
-eval_answer(answer)
+# Print the results
+print(result["messages"][-1].content)
