@@ -5,6 +5,18 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 
+# The chat UI is a Next.js app that runs in the background, so if it can't
+# start, its error scrolls past. Check what it needs up front instead.
+if ! command -v node >/dev/null 2>&1 || ! command -v pnpm >/dev/null 2>&1; then
+    echo "The chat UI needs Node.js 20 or later and pnpm." >&2
+    echo "Install Node.js from https://nodejs.org, then run: npm install -g pnpm" >&2
+    exit 1
+fi
+if ! grep -q '^LANGSMITH_API_KEY=.' "$SCRIPT_DIR/../../.env" 2>/dev/null; then
+    echo "The chat UI needs LANGSMITH_API_KEY set in typescript/.env." >&2
+    exit 1
+fi
+
 # Kill any leftover mail server or chat UI from a previous run.
 for PORT in 5002 3000 3001; do
     OLD_PID=$(lsof -ti ":$PORT" 2>/dev/null || true)
