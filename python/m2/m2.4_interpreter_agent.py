@@ -9,16 +9,16 @@ from langchain_quickjs import CodeInterpreterMiddleware
 
 from models import model
 
-DB_PATH = Path(__file__).resolve().parent / "chinook.db"
+DB_PATH: Path = Path(__file__).resolve().parent / "chinook.db"
 
-TASK = (
+USER_PROMPT_COMMON: str = (
     "Who is our top-selling artist, what is their best-selling album, "
     "what is the most-purchased track on that album, "
     "and how many distinct customers have bought that track? "
     "Each answer depends on the result of the previous query."
 )
 
-SYSTEM = (
+SYSTEM_PROMPT_WITHOUT_PTC: str = (
     "You are a sales analyst for Chinook Digital Music Store. "
     "Use the query_chinook tool to query the database. "
     "Key tables: Artist(ArtistId, Name), Album(AlbumId, Title, ArtistId), "
@@ -27,6 +27,13 @@ SYSTEM = (
     "Revenue is InvoiceLine.UnitPrice * InvoiceLine.Quantity."
 )
 
+SYSTEM_PROMPT_WITH_PTC: str = SYSTEM_PROMPT_WITHOUT_PTC + (
+    " The eval tool supports Programmatic Tool Calling (PTC): JavaScript"
+    " running inside eval() can call query_chinook via tools.queryChinook()."
+    " For dependent queries where each answer requires a result from the"
+    " previous, prefer a single eval() call that chains all queries in"
+    " JavaScript — intermediate values stay in variables and never return to the model."
+)
 
 @tool
 def query_chinook(sql: str) -> str:
@@ -50,18 +57,11 @@ agent_with = create_deep_agent(
     model=model,
     tools=[query_chinook],
     middleware=[CodeInterpreterMiddleware(ptc=["query_chinook"])],
-    system_prompt=(
-        SYSTEM
-        + " The eval tool supports Programmatic Tool Calling (PTC): JavaScript"
-        " running inside eval() can call query_chinook via tools.queryChinook()."
-        " For dependent queries where each answer requires a result from the"
-        " previous, prefer a single eval() call that chains all queries in"
-        " JavaScript — intermediate values stay in variables and never return to the model."
-    ),
+    system_prompt=SYSTEM_PROMPT_WITH_PTC,
 )
 
 result_with = agent_with.invoke(
-    {"messages": [{"role": "user", "content": TASK}]},
+    {"messages": [{"role": "user", "content": USER_PROMPT_COMMON}]},
     config={"configurable": {"thread_id": str(uuid.uuid4())}},
 )
 
@@ -74,11 +74,11 @@ agent_without = create_deep_agent(
     name="agent_without_eval_ptc",
     model=model,
     tools=[query_chinook],
-    system_prompt=SYSTEM,
+    system_prompt=SYSTEM_PROMPT_WITHOUT_PTC,
 )
 
 result_without = agent_without.invoke(
-    {"messages": [{"role": "user", "content": TASK}]},
+    {"messages": [{"role": "user", "content": USER_PROMPT_COMMON}]},
     config={"configurable": {"thread_id": str(uuid.uuid4())}},
 )
 
