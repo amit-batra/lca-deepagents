@@ -62,7 +62,8 @@ from langchain.chat_models import init_chat_model
 # Pull a model first, e.g.:  ollama pull qwen2.5:7b
 # Note: small local models (7-8B) can mis-call tools or guess names; keep strong_model on a hosted model.
 #
-# model = init_chat_model("ollama:qwen2.5:7b")
+model = init_chat_model("ollama:gemma4:26b")
+strong_model = init_chat_model("ollama:qwen3.8:27b")
 
 # Kimi (Moonshot AI): OpenAI-compatible hosted API
 # No extra install needed (langchain-openai is already a default dep)
@@ -104,7 +105,3 @@ from langchain.chat_models import init_chat_model
 # Requires GOOGLE_API_KEY in .env
 #
 # model = init_chat_model("google_genai:gemini-3.5-flash-lite")
-
-# Ollama
-model = init_chat_model("ollama:gemma4:26b")
-strong_model = init_chat_model("ollama:qwen3.8:27b")

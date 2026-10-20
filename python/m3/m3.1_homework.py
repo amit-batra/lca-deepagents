@@ -7,13 +7,13 @@ conversation ONCE, past the 85% threshold. But summarization doesn't just
 fire once and stop: on a long enough conversation it fires again, and again
 each time it re-summarizes the previous summary plus whatever's new since,
 while the FULL evicted history keeps piling up in a single backend file at
-/conversation_history/{thread_id}.md. 
+/conversation_history/{thread_id}.md.
 
-This homework asks you to build a conversation on a topic you pick that's 
-long enough to trigger summarization AT LEAST TWICE, then confirm two things: 
-the model can still recall a detail from your very first turn (after being 
-compacted multiple times), and the conversation history file on the backend 
-actually accumulated multiple "Summarized at ..." sections 
+This homework asks you to build a conversation on a topic you pick that's
+long enough to trigger summarization AT LEAST TWICE, then confirm two things:
+the model can still recall a detail from your very first turn (after being
+compacted multiple times), and the conversation history file on the backend
+actually accumulated multiple "Summarized at ..." sections
 instead of losing earlier ones.
 
 WHAT YOU FILL IN
@@ -82,7 +82,7 @@ def build_turns() -> list[str]:
             "application software, desktop applications, cloud services and agentic systems."
         ),
         "I love working both in the capacity of a software architect, as well as a software developer.",
-        "Had it not been for software development, I would have felt lost in my life."
+        "Had it not been for software development, I would have felt lost in my life.",
         "This industry evolves so fast that one has to constantly keep updating our skills.",
         "You never know what's going to be the next biggest skill in demand.",
         "How much work experience do I have overall and in what area(s)?"
@@ -152,11 +152,16 @@ async def show_state(seen_cutoffs: set) -> bool:
     messages = state.values.get("messages", [])
     event = state.values.get("_summarization_event")
     print(f"  stored : {len(messages)} message(s) (raw history, never trimmed)")
+
     if not event:
         return False
+
+    is_new_event = False
     cutoff = event.get("cutoff_index", "?")
-    is_new_event = cutoff not in seen_cutoffs
-    seen_cutoffs.add(cutoff)
+    if cutoff not in seen_cutoffs:
+        seen_cutoffs.add(cutoff)
+        is_new_event = True
+
     tag = "  <-- NEW EVENT" if is_new_event else ""
     print(f"  model saw : summary + messages[{cutoff}:]  [SUMMARIZED]{tag}")
     return is_new_event
