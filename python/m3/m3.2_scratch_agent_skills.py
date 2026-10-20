@@ -1,4 +1,5 @@
 from pathlib import Path
+from uuid import uuid4
 
 from deepagents import create_deep_agent
 from deepagents.backends.filesystem import FilesystemBackend
@@ -16,6 +17,7 @@ agent = create_deep_agent(
     system_prompt="You are a sales assistant.",
 )
 
+thread_qualify_sales_lead = {"configurable": {"thread_id": f"qualify-lead-{uuid4()}"}}
 result = agent.invoke({
     "messages": [
         {
@@ -28,5 +30,18 @@ result = agent.invoke({
             )
         }
     ]
-})
+}, config=thread_qualify_sales_lead)
+print(result["messages"][-1].text)
+
+print(f"\n{'─' * 50}\n")
+
+thread_draft_sales_pitch = {"configurable": {"thread_id": f"draft-pitch-{uuid4()}"}}
+result = agent.invoke({
+    "messages": [
+        {
+            "role": "user",
+            "content": "Write a cold outreach message for a prospect at a mid-size logistics company."
+        }
+    ]
+}, config=thread_draft_sales_pitch)
 print(result["messages"][-1].text)
