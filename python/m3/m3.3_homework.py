@@ -52,7 +52,7 @@ def memory_namespace(runtime):
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 1: Write two different seed memories.
+# STEP 1: Write two different seed memories.
 #
 # Pick a domain that's genuinely yours (not coding style guidelines): a
 # recipe, a reading list, a plant-watering schedule, a training log. Write
@@ -73,21 +73,40 @@ def memory_namespace(runtime):
 # ════════════════════════════════════════════════════════════════════════
 
 def build_seed_memory_a() -> str:
-    """TODO 1: return CONTEXT_A's starting memory content."""
-    raise NotImplementedError("TODO 1: see the comment block above")
+    return """# Agent Memory
+## List of cities that I have visited
+- New Delhi
+- Agra
+- Nanital
+- Shimla
+- Bangalore
+- San Jose
+
+## About my last trip
+- My last trip was to San Jose in September 2025.
+"""
 
 
 def build_seed_memory_b() -> str:
-    """TODO 1: return CONTEXT_B's starting memory content."""
-    raise NotImplementedError("TODO 1: see the comment block above")
+    return """# Agent Memory
+## List of cities that I have visited
+- Mumbai
+- Hyderabad
+- Kolkata
+- Rohtak
+- Shrinagar
+- Vienna
 
+## About my last trip
+- My last trip was to Vienna in May 2019.
+"""
 
 store.put(namespace_from_context(CONTEXT_A), store_memory_path, create_file_data(build_seed_memory_a()))
 store.put(namespace_from_context(CONTEXT_B), store_memory_path, create_file_data(build_seed_memory_b()))
 
 agent = create_deep_agent(
+    name="m3.3_homework_agent",
     model=model,
-    name="Homework_Memory_Agent",
     backend=CompositeBackend(
         default=StateBackend(),
         routes={"/memories/": StoreBackend(namespace=memory_namespace)},
@@ -99,7 +118,7 @@ agent = create_deep_agent(
 
 
 # ════════════════════════════════════════════════════════════════════════
-# TODO 2: Write your three prompts.
+# STEP 2: Write your three prompts.
 #
 # RECALL_QUESTION: answerable directly from build_seed_memory_a(), asked
 #   under CONTEXT_A.
@@ -111,9 +130,9 @@ agent = create_deep_agent(
 #   reflect B's own seed, not A's.
 # ════════════════════════════════════════════════════════════════════════
 
-RECALL_QUESTION = "TODO 2: replace with a question answerable from build_seed_memory_a() alone."
-REMEMBER_MESSAGE = "TODO 2: replace with a 'remember this' message introducing a new, distinctive fact under context A."
-LEAK_CHECK_QUESTION = "TODO 2: replace with the SAME question as RECALL_QUESTION."
+RECALL_QUESTION = "Did I ever visit San Jose and if yes, when was my last visit to San Jose?"
+REMEMBER_MESSAGE = "Remember that my last visit was to Bangalore in October 2025."
+LEAK_CHECK_QUESTION = "Did I ever visit San Jose and if yes, when was my last visit to San Jose?"
 
 # 1. Context A recalls from its own seed.
 result_a1 = agent.invoke({"messages": [{"role": "user", "content": RECALL_QUESTION}]}, context=CONTEXT_A)
