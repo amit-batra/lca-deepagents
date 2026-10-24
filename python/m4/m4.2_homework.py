@@ -47,8 +47,8 @@ SCRATCH_ROOT: str = "/scratch"
 tavily_api_key: str = os.environ.get("TAVILY_API_KEY", "")
 if not tavily_api_key:
     raise RuntimeError(
-        "TAVILY_API_KEY is required for the Module 4.2 newsletter lab. "
-        "Set it in your environment before running m4.2_run_newsletter.py."
+        "TAVILY_API_KEY is required for this script. "
+        "Set it in your environment and then re-run this script."
     )
 
 _tavily: TavilyClient = TavilyClient(api_key=tavily_api_key)
