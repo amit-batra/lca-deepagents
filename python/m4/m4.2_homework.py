@@ -47,7 +47,7 @@ SCRATCH_ROOT: str = "/scratch"
 tavily_api_key: str = os.environ.get("TAVILY_API_KEY", "")
 if not tavily_api_key:
     raise RuntimeError(
-        "TAVILY_API_KEY is required for this script. "
+        "TAVILY_API_KEY is required for running this script. "
         "Set it in your environment and then re-run this script."
     )
 
