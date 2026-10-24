@@ -1,67 +1,83 @@
 # python/m4/m4_2_newsletter_agent.py
-"""Module 4 · Lesson 2 — Building a subagent team.
+"""
+Module 4 · Lesson 2 — Building a subagent team.
 
-An "editor" main agent delegates each of the distributor's top music genres to
-a single `genre-researcher` subagent type, run in parallel. Each researcher
-web-searches its genre, keeps the raw results in an assigned /research/<genre>/
-scratch folder, and returns one short article segment. The editor assembles the
-segments and writes a styled HTML newsletter to /output/newsletter.html.
+This module implements a multi-agent system designed to research music genres
+and compile them into a weekly newsletter. It follows a "Manager/Worker"
+architecture where a central 'Editor' agent coordinates several
+'Genre Researcher' subagents.
 
-The agent runs on the default (ephemeral) StateBackend — it never touches the
-real local filesystem. The companion m4.2_run_newsletter.py extracts the finished HTML from agent state
-and writes it to disk.
+Architecture Overview:
+1. Editor (Main Agent): Coordinates subagents, assembles research, and
+   generates the final HTML output.
+2. Genre Researcher (Subagent): Performs web searches and archives raw
+   data to a specific research folder before providing a summary.
+
+Security Note:
+The agent operates in a sandboxed 'StateBackend'. It uses 'FilesystemPermission'
+to strictly control where subagents can write data, ensuring researchers
+cannot overwrite system files or the editor's output.
 """
 
 import os
+from typing import Any
 
 import markdown as md
 import nh3
 from deepagents import FilesystemPermission, create_deep_agent
 from langchain_core.tools import tool
+from langgraph.graph.state import CompiledStateGraph
 from tavily import TavilyClient
 
-from models import model, strong_model
+from models import model
 
-# The distributor's top genres — known up front, no database needed.
-TOP_GENRES = ["Rock", "Latin", "Metal", "Alternative & Punk"]
+__all__ = ["agent"]
+
+# --- Configuration ---
+
+# The target genres for the newsletter.
+TOP_GENRES: list[str] = ["Rock", "Latin", "Metal", "Alternative & Punk"]
 
 
-# --- Tools -----------------------------------------------------------------
-# internet_search belongs ONLY to the subagent (see `tools=` below).
-tavily_api_key = os.environ.get("TAVILY_API_KEY")
+# --- Tools ---
+
+# Initialize the Tavily client for web searching.
+tavily_api_key: str = os.environ.get("TAVILY_API_KEY", "")
 if not tavily_api_key:
     raise RuntimeError(
         "TAVILY_API_KEY is required for the Module 4.2 newsletter lab. "
         "Set it in your environment before running m4.2_run_newsletter.py."
     )
 
-_tavily = TavilyClient(api_key=tavily_api_key)
+_tavily: TavilyClient = TavilyClient(api_key=tavily_api_key)
 
 
 @tool
-def internet_search(query: str, max_results: int = 8) -> dict:
-    """Search the web for recent news. Use this to research what's new in a
-    music genre — new releases, notable artists, trends, and events."""
+def internet_search(query: str, max_results: int = 8) -> dict[str, Any]:
+    """
+    Search the web for recent news.
+
+    Use this to research what's new in a music genre — new releases,
+    notable artists, trends, and events.
+    """
     return _tavily.search(query, max_results=max_results, topic="news")
 
 
-# markdown_to_html belongs ONLY to the editor (the main agent).
-# The template is a fixed, static string. NOTE: in production you would
-# sanitize model/search-derived text before rendering it to HTML.
-_HTML_TEMPLATE = """<!doctype html>
+# The HTML template used for the final newsletter.
+_HTML_TEMPLATE: str = """<!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<title>{title}</title>
-<style>
-  body {{ max-width: 760px; margin: 40px auto; padding: 0 20px;
-          font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
-          line-height: 1.6; color: #1a1a1a; }}
-  h1 {{ font-size: 2rem; border-bottom: 3px solid #006DDD; padding-bottom: .3em; }}
-  h2 {{ color: #006DDD; margin-top: 1.6em; }}
-  footer {{ margin-top: 3em; color: #777; font-size: .85rem;
-            border-top: 1px solid #ddd; padding-top: 1em; }}
-</style>
+  <meta charset="utf-8">
+  <title>{title}</title>
+  <style>
+    body {{ max-width: 760px; margin: 40px auto; padding: 0 20px;
+            font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+            line-height: 1.6; color: #1a1a1a; }}
+    h1 {{ font-size: 2rem; border-bottom: 3px solid #006DDD; padding-bottom: .3em; }}
+    h2 {{ color: #006DDD; margin-top: 1.6em; }}
+    footer {{ margin-top: 3em; color: #777; font-size: .85rem;
+              border-top: 1px solid #ddd; padding-top: 1em; }}
+  </style>
 </head>
 <body>
 {body}
@@ -72,18 +88,26 @@ _HTML_TEMPLATE = """<!doctype html>
 
 @tool
 def markdown_to_html(markdown_text: str, title: str = "This Week in Music") -> str:
-    """Convert a Markdown newsletter into a complete, styled HTML page.
-    Returns the full HTML document as a string."""
-    body = md.markdown(markdown_text, extensions=["tables", "fenced_code"])
-    # Good practice: the newsletter text is derived from untrusted web search,
-    # so allowlist-sanitize it (strips <script>, onerror=, etc.) before it goes
-    # into the page. We clean only the body; the template itself is trusted.
+    """
+    Convert a Markdown newsletter into a complete, styled HTML page.
+
+    Args:
+        markdown_text: The raw markdown content.
+        title: The title to appear in the HTML `<title>` tag.
+
+    Returns:
+        A complete, sanitized HTML document as a string.
+    """
+    body: str = md.markdown(markdown_text, extensions=["tables", "fenced_code"])
+
+    # Security: Sanitize the body to prevent XSS from untrusted search content.
     body = nh3.clean(body)
     return _HTML_TEMPLATE.format(title=title, body=body)
 
 
-# --- The research subagent -------------------------------------------------
-GENRE_PROMPT = """You are a music journalist researching one genre for an
+# --- Subagent Definition: Genre Researcher ---
+
+GENRE_PROMPT: str = """You are a music journalist researching one genre for an
 online music distributor's weekly newsletter.
 
 You will be given a single genre and an assigned research folder to work in.
@@ -105,27 +129,28 @@ Return ONLY the finished segment as your reply:
 - Do NOT paste raw search results or link dumps into your reply — those live
   in your research files. Return just the polished segment."""
 
-# Researchers may write under /research/** and are denied writes elsewhere.
-research_permissions = [
+# Permission scoping: Researchers can only write to their specific assigned folders.
+research_permissions: list[FilesystemPermission] = [
     FilesystemPermission(operations=["read", "write"], paths=["/research/**"], mode="allow"),
     FilesystemPermission(operations=["write"], paths=["/**"], mode="deny"),
 ]
 
-genre_researcher = {
+genre_researcher: dict[str, Any] = {
     "name": "genre-researcher",
     "description": (
         "Research one music genre and write a short newsletter segment about "
         "what's new in it. Delegate one genre per call."
     ),
-    "system_prompt": GENRE_PROMPT,         # its own brain — never inherited
-    "tools": [internet_search],            # override — replaces the inherited set
-    "model": model,                        # override — the cheaper Haiku 4.5
-    "permissions": research_permissions,   # override — scoped write access
+    "system_prompt": GENRE_PROMPT,         # Internal brain (not inherited)
+    "tools": [internet_search],            # Overrides inherited tools
+    "model": model,                        # Uses the lighter version from models.py
+    "permissions": research_permissions,   # Restricted scoped access
 }
 
 
-# --- The editor (main agent) -----------------------------------------------
-EDITOR_PROMPT = f"""You are the editor of an online music distributor's weekly
+# --- Main Agent Definition: Editor ---
+
+EDITOR_PROMPT: str = f"""You are the editor of an online music distributor's weekly
 newsletter. This week you are featuring the distributor's top genres:
 {", ".join(TOP_GENRES)}.
 
@@ -141,16 +166,15 @@ Your job:
 
 Keep your own context focused on coordination and assembly."""
 
-# The editor uses the stronger shared model; the researcher overrides to the
-# cheaper `model` (Haiku 4.5) above. Both come from models.py.
-
-# The editor may read the research area but must not write into it.
-editor_permissions = [
+# Permission scoping: The editor is strictly forbidden from writing to the research logs.
+editor_permissions: list[FilesystemPermission] = [
     FilesystemPermission(operations=["write"], paths=["/research/**"], mode="deny"),
 ]
 
-agent = create_deep_agent(
-    model=strong_model,
+# The primary agent exported for use in the runner script.
+agent: CompiledStateGraph = create_deep_agent(
+    name="m4.2_lab_editor_agent",
+    model=model,
     tools=[markdown_to_html],
     system_prompt=EDITOR_PROMPT,
     subagents=[genre_researcher],

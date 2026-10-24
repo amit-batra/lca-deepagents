@@ -1,64 +1,115 @@
 # python/m4/m4.2_run_newsletter.py
-"""Run the editor agent and save everything it produces.
+"""
+Module to run the Newsletter Editor agent and capture its output to the local filesystem.
 
-Note on file handling: Deep Agents *can* be given real local disk access (via a
-FilesystemBackend), but we deliberately don't. This agent runs on the default
-StateBackend, which keeps the files it writes in agent state. Nothing is written
-directly to your machine. Letting an agent write to your filesystem is a
-permission you grant, and you shouldn't grant it when the agent is acting on
-untrusted web-search content. Instead, this trusted host code reads the files
-out of agent state (the "files" channel) after invoke and mirrors them to OUT_DIR:
-the finished newsletter plus each researcher's raw /research/<genre>/ archive, so
-you can inspect what was quarantined there.
+Architecture Note:
+To maintain security, this script uses a 'Trusted Host' pattern. The agent executes
+in a sandboxed 'StateBackend' (it has no direct disk access). This script acts
+as the host that retrieves the files (the 'files' channel) from the agent's
+state after it finishes and mirrors them to a local directory. This prevents
+untrusted web-search content from directly writing to your machine.
 """
 
 from pathlib import Path
+from typing import Any, Union
+from uuid import uuid4
 
 from m4_2_newsletter_agent import agent
 
-OUT_DIR = Path(__file__).resolve().parent / "output"
-OUT_DIR.mkdir(exist_ok=True)
+# Configuration
+# The root directory where agent-produced files will be stored locally.
+OUT_DIR: Path = Path(__file__).resolve().parent / "output"
 
-result = agent.invoke(
-    {"messages": [{"role": "user", "content": "Put together this week's newsletter."}]},
-    config={"recursion_limit": 50},
-)
+def _content(fd: Union[dict[str, Any], str, list[str]]) -> str:
+    """
+    Extracts or normalizes the string content from a file data entry.
 
-# The editor's final reply (coordination summary).
-print(result["messages"][-1].text)
+    Args:
+        fd: A file data entry. Can be a raw string, a list of strings,
+           or a dictionary containing a 'content' key.
 
-# Everything the agent produced lives in agent state (not on your disk — it ran
-# in the default StateBackend). Pull it all out and mirror it to OUT_DIR: the
-# editor's newsletter AND each researcher's raw /research/<genre>/ archive.
-files = result.get("files", {})
-if "/output/newsletter.html" not in files:
-    raise SystemExit("Agent did not write /output/newsletter.html")
-
-
-def _content(fd) -> str:
-    # FileData entries are dicts keyed by "content" (string, or legacy list).
-    body = fd["content"] if isinstance(fd, dict) else fd
+    Returns:
+        str: The extracted file content.
+    """
+    # Handle both FileData dicts (via 'content' key) and legacy raw strings/lists.
+    body: Union[str, list[str]] = fd["content"] if isinstance(fd, dict) else fd
     return "\n".join(body) if isinstance(body, list) else body
 
+def mirror_agent_files(files: dict[str, Any], out_dir: Path) -> None:
+    """
+    Validates and mirrors agent-produced files from memory to the local filesystem.
 
-out_root = OUT_DIR.resolve()
-print("\nWriting agent files to disk:")
-for path in sorted(files):
-    # Map the in-state layout onto OUT_DIR: /output/* lands at the root,
-    # /research/<genre>/* keeps its folder structure.
-    rel = path[len("/output/"):] if path.startswith("/output/") else path.lstrip("/")
-    dest = (OUT_DIR / rel).resolve()
+    Args:
+        files: A dictionary mapping relative agent paths to their content.
+        out_dir: The local directory where files should be written.
 
-    # The file contents are UNTRUSTED web-search text, and the path came from
-    # the agent — so verify the destination stays inside OUT_DIR before writing
-    # (reject any ../ traversal), and only ever write plain text.
-    if dest != out_root and out_root not in dest.parents:
-        print(f"  SKIPPED (escapes output dir): {path}")
-        continue
+    Raises:
+        SystemExit: If the required newsletter file is missing from the input.
+    """
+    # Validation: The core product (the newsletter) must be present.
+    if "/output/newsletter.html" not in files:
+        raise SystemExit("Error: The agent failed to produce the newsletter (/output/newsletter.html).")
 
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    body = _content(files[path])
-    dest.write_text(body, encoding="utf-8")
-    print(f"  {path}  ->  {dest.relative_to(out_root)}  ({len(body):,} chars)")
+    print(f"\nMirroring agent files to: {out_dir.resolve()}")
+    out_root: Path = out_dir.resolve()
 
-print(f"\nOpen {OUT_DIR / 'newsletter.html'} in your browser to read this week's issue.")
+    for path in sorted(files.keys()):
+        # --- Step A: Map internal paths to local filesystem ---
+        # We treat '/output/' as the root of our local directory.
+        # Other paths (like '/research/genre/...') preserve their folder structure.
+        if path.startswith("/output/"):
+            rel: str = path[len("/output/"):]
+        else:
+            rel: str = path.lstrip("/")
+
+        dest: Path = (out_dir / rel).resolve()
+
+        # --- Step B: Security Validation (Path Traversal Protection) ---
+        # Since paths and contents come from the agent (which performs web searches),
+        # we MUST verify the destination is within our 'out_root' to prevent
+        # an agent from writing to sensitive system locations via '../' tricks.
+        if dest != out_root and out_root not in dest.parents:
+            print(f"  [SKIP] Security violation: {path} escapes output directory.")
+            continue
+
+        # --- Step C: Write to Disk ---
+        # Ensure the directory exists and write the content as plain text.
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        body: str = _content(files[path])
+        dest.write_text(body, encoding="utf-8")
+        print(f"  [OK] {path} -> {dest.relative_to(out_root)} ({len(body):,} chars)")
+
+def main() -> None:
+    """
+    Executes the agent and processes its state to write files to disk.
+    """
+    # 1. SETUP
+    # Ensure the local output directory exists before we start.
+    OUT_DIR.mkdir(exist_ok=True)
+
+    # 2. EXECUTION
+    print("Invoking Newsletter Agent...")
+    result: dict[str, Any] = agent.invoke(
+        {"messages": [{"role": "user", "content": "Put together this week's newsletter."}]},
+        config={
+            "recursion_limit": 50,
+            "configurable": {
+                "thread_id": f"m4.2_newsletter_thread_{uuid4()}"
+            }
+        },
+    )
+
+    # 3. DISPLAY SUMMARY
+    # Show the last message from the agent (its final coordination summary).
+    print("\nAgent Summary:")
+    print(result["messages"][-1].text)
+
+    # 4. FILE EXTRACTION & MIRRORING
+    # Retrieve the dictionary of files created during the agent's run.
+    files: dict[str, Any] = result.get("files", {})
+    mirror_agent_files(files, OUT_DIR)
+
+    print(f"\nCompleted. Please view the results in: {OUT_DIR / 'newsletter.html'}")
+
+if __name__ == "__main__":
+    main()
