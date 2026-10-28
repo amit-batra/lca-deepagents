@@ -44,7 +44,7 @@ book_scanner = {
         "Delegate one book per call, passing that book's label and full text."
     ),
     "system_prompt": SCANNER_PROMPT,
-    "model": model,  # cheaper Haiku 4.5: this is a narrow, repeated task
+    "model": model,  # MoE gemma4:26b -- this is a narrow, repeated task
 }
 
 
@@ -57,8 +57,8 @@ The manuscript is split into 60 books, each starting with a line formatted
 exactly as "=== EPIC BOOK N ===" (e.g. "=== ILIAD BOOK 9 ===").
 
 Run a workflow that reads the manuscript, splits it into its 60 books, and
-dispatches one book-scanner subagent call per book, batching 30 books per
-Promise.all round (2 rounds total) rather than the smaller batches shown in
+dispatches one book-scanner subagent call per book, batching 5 books per
+Promise.all round (12 rounds total) rather than the batche size shown in
 your tool guidance. Never read a book's full text into your own context; let
 the interpreter hold the file, and let each subagent hold only its own book.
 Collect every subagent's findings into one final report, grouped by
@@ -72,7 +72,7 @@ manuscript_permissions = [
 ]
 
 agent = create_deep_agent(
-    model=strong_model,
+    model=strong_model, # dense qwen3.8:27b
     middleware=[CodeInterpreterMiddleware(ptc=["read_file", "grep"])],
     system_prompt=MANUSCRIPT_PROMPT,
     subagents=[book_scanner],
