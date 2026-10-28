@@ -57,8 +57,8 @@ The manuscript is split into 60 books, each starting with a line formatted
 exactly as "=== EPIC BOOK N ===" (e.g. "=== ILIAD BOOK 9 ===").
 
 Run a workflow that reads the manuscript, splits it into its 60 books, and
-dispatches one book-scanner subagent call per book, batching 5 books per
-Promise.all round (12 rounds total) rather than the batche size shown in
+dispatches one book-scanner subagent call per book, batching 3 books per
+Promise.all round (20 rounds total) rather than the batche size shown in
 your tool guidance. Never read a book's full text into your own context; let
 the interpreter hold the file, and let each subagent hold only its own book.
 Collect every subagent's findings into one final report, grouped by
