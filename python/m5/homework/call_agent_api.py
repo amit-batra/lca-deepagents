@@ -29,8 +29,8 @@ from langgraph_sdk import get_client
 API_URL = "http://127.0.0.1:2024"
 ASSISTANT_ID = "agent"  # matches the "agent" key in langgraph.json's "graphs"
 
-# TODO 3: replace this with a question that should trigger your tool.
-QUESTION = "TODO 3: replace this with a question for your deployed agent."
+# STEP 3: replace this with a question that should trigger your tool.
+QUESTION = "Tell me an interesting fact about math."
 
 
 def _last_ai_text(messages: list) -> str:
@@ -57,8 +57,5 @@ async def main() -> None:
     print("\n--- Agent response (received over HTTP, not agent.invoke()) ---")
     print(_last_ai_text(result["messages"]))
 
-
-if QUESTION.startswith("TODO 3"):
-    raise NotImplementedError("TODO 3: see the comment block above")
 
 asyncio.run(main())

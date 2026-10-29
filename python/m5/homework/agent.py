@@ -30,6 +30,8 @@ from langchain_core.tools import tool
 from deepagents import create_deep_agent
 from models import model
 
+# STEP 1: Write a lookup_fact tool
+
 facts: dict[str, str] = {
   "astronomy": "The moon is 384,000 km away from the earth.",
   "chemistry": "Isotopes have identical atomic numbers but differ in their atomic weights.",
@@ -58,6 +60,8 @@ def lookup_fact(topic: str) -> str:
     return fact
   else:
     return f"I don't know about {topic!r}."
+
+# STEP 2: Define a system prompt for the agent
 
 SYSTEM_PROMPT = """You are a facts expert. Use the `lookup_fact` tool
 to look up facts on any topic that the user is interested in. Do not
