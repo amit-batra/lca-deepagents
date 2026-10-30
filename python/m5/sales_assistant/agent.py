@@ -22,7 +22,7 @@ from subagents import build_subagents
 from tools.chart import render_pie_chart
 from tools.html import markdown_to_html
 
-from models import strong_model
+from models import model
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +47,7 @@ async def make_graph():
     client = MultiServerMCPClient({"mock-mail": MAIL_SERVER})
     mail_tools = await client.get_tools()
     return create_deep_agent(
-        model=strong_model,
+        model=model,
         tools=[markdown_to_html, render_pie_chart] + mail_tools,
         system_prompt=SYSTEM_PROMPT,
         subagents=build_subagents(_backend, enable_search=_enable_search, mail_tools=mail_tools),

@@ -28,7 +28,7 @@ from deepagents import FilesystemPermission, MemoryMiddleware
 from deepagents.backends.protocol import BackendProtocol
 from tools.sql import add_customer, introspect_schema, query_chinook
 
-from models import model, strong_model
+from models import model
 
 # Allow all three agent-inbox decisions on the gated write.
 _APPROVE_EDIT_REJECT = {"allowed_decisions": ["approve", "edit", "reject"]}
@@ -139,7 +139,7 @@ def build_subagents(
             "arithmetic and sane pricing before it is sent. Send it the numbers."
         ),
         "system_prompt": REVIEWER_PROMPT,
-        "model": strong_model,
+        "model": model,
     }
 
     inbox_manager = {

@@ -18,7 +18,7 @@ _tavily = TavilyClient(api_key=os.environ["TAVILY_API_KEY"])
 
 
 @tool
-def internet_search(query: str, max_results: int = 8) -> dict:
+def internet_search(query: str, max_results: int = 4) -> dict:
     """Search the web for recent news. Use this to research what's new in a
     music genre — new releases, notable artists, trends, and events."""
     return _tavily.search(query, max_results=max_results, topic="news")
