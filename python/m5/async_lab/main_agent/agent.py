@@ -34,10 +34,10 @@ subagents = [
             "of running in-process here. Launch one task per grouping if you need "
             "both."
         ),
-        graph_id="agent",
+        graph_id="specialized_agent",
         url="http://127.0.0.1:2025",
     ),
 ]
 
 # langgraph.json points at this module-level variable: "./agent.py:graph"
-graph = create_deep_agent(model=model, subagents=subagents)
+graph = create_deep_agent(name="main_agent", model=model, subagents=subagents)
