@@ -49,13 +49,12 @@ setGlobalDispatcher(new Agent({ connections: 64 }));
 export const model = await initChatModel("anthropic:claude-haiku-4-5", { timeout: 60_000, maxRetries: 2 });
 
 // A more capable model for steps that need stronger reasoning
-export const strongModel = await initChatModel("anthropic:claude-sonnet-4-6", { timeout: 120_000, maxRetries: 2 });
+export const strongModel = await initChatModel("anthropic:claude-sonnet-5-5", { timeout: 120_000, maxRetries: 2 });
 
 // ═══ Alternative Models (comment out default above, uncomment one below) ═════
-// export const model = await initChatModel("anthropic:claude-sonnet-4-6");
-// export const model = await initChatModel("openai:gpt-4.1-mini");
-// export const model = await initChatModel("openai:gpt-4.1");
-// export const strongModel = await initChatModel("openai:gpt-4.1");
+// export const model = await initChatModel("anthropic:claude-sonnet-5-5");
+// export const model = await initChatModel("openai:gpt-6-luna");
+// export const strongModel = await initChatModel("openai:gpt-6.1-sol");
 
 // ═══ Open-Source / Alternative Hosted Models ══════════════════════════════════
 

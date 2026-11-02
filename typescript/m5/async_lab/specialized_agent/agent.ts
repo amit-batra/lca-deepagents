@@ -21,8 +21,8 @@
 
 import { z } from "zod";
 import { tool } from "langchain";
-import { initChatModel } from "langchain";
 import { createDeepAgent } from "deepagents";
+import { model } from "../../../models.js";
 
 interface SalesRow {
   region: string;
@@ -75,8 +75,6 @@ const analyzeSales = tool(
     }),
   }
 );
-
-const model = await initChatModel("anthropic:claude-haiku-4-5");
 
 // `langgraph.json` points at this module-level export: "./agent.ts:graph".
 export const graph = createDeepAgent({ model, tools: [analyzeSales] });

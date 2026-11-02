@@ -57,7 +57,7 @@ importers:
         specifier: latest
         version: 1.2.0(@langchain/core@1.2.11(openai@7.15.0(undici@8.9.0)(ws@8.21.1)(zod@4.4.3))(ws@8.21.1))
       '@modelcontextprotocol/sdk':
-        specifier: latest
+        specifier: ^1.30.0
         version: 1.30.0(@cfworker/json-schema@4.1.1)(zod@4.4.3)
       canvas:
         specifier: ^3.2.3

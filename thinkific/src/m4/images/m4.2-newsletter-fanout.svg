@@ -28,7 +28,7 @@
     <circle cx="384" cy="106" r="5" fill="#7FC8FF"/>
     <rect x="354" y="120" width="32" height="7" rx="3.5" fill="#7FC8FF"/>
     <text x="370" y="156" text-anchor="middle" font-size="11" fill="#CCE9FF" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">main agent · editor</text>
-    <text x="370" y="170" text-anchor="middle" font-size="9" fill="#5BADDF" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Sonnet 4.6</text>
+    <text x="370" y="170" text-anchor="middle" font-size="9" fill="#5BADDF" font-family="'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace">Sonnet 5.5</text>
   </g>
 
   <!-- output deliverable: newsletter.html assembled by the editor -->
